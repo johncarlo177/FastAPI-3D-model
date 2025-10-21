@@ -29,6 +29,7 @@ import { EnumeratePlugins, PluginType } from './pluginregistry.js';
 import { EnvironmentSettings } from '../engine/viewer/shadingmodel.js';
 import { IntersectionMode } from '../engine/viewer/viewermodel.js';
 import { Loc } from '../engine/core/localization.js';
+import axiosInstance from './axios.js';
 
 const WebsiteUIState =
 {
@@ -410,6 +411,7 @@ export class Website
             if (defaultColor !== null) {
                 importSettings.defaultColor = defaultColor;
             }
+            console.log('model load stated hash');
             HandleEvent ('model_load_started', 'hash');
             this.LoadModelFromUrlList (urls, importSettings);
         } else {
@@ -490,52 +492,85 @@ export class Website
         this.ClearHashIfNotOnlyUrlList ();
     }
 
+    // Method syntax inside the class
+    async UploadModelToServer(files, mainFile = null) {
+        try {
+            const formData = new FormData();
+            files.forEach(file => formData.append('files', file));
+            if (mainFile) formData.append('mainFile', mainFile);
+
+            const response = await axiosInstance.post('/api/upload-model', formData);
+
+            console.log('Server response:', response.data);
+            if (response.data.status === 'ok') {
+                HandleEvent('model_loaded', response.data.extension);
+            }
+        } catch (error) {
+            console.error('Upload error:', error.response ? error.response.data : error.message);
+            HandleEvent('failed_to_load_file', files.map(f => f.name).join(','));
+        }
+    }
+
     LoadModelFromInputFiles (files, settings)
     {
-        this.modelLoaderUI.LoadModel (files, settings, {
-            onStart : () =>
-            {
-                this.SetUIState (WebsiteUIState.Loading);
-                this.ClearModel ();
-            },
-            onFinish : (importResult, threeObject) =>
-            {
-                this.SetUIState (WebsiteUIState.Model);
-                this.OnModelLoaded (importResult, threeObject);
-                let importedExtension = GetFileExtension (importResult.mainFile);
-                HandleEvent ('model_loaded', importedExtension);
-            },
-            onRender : () =>
-            {
-                this.viewer.Render ();
-            },
-            onError : (importError) =>
-            {
-                this.SetUIState (WebsiteUIState.Intro);
-                let extensionStr = null;
-                if (importError.mainFile !== null) {
-                    extensionStr = GetFileExtension (importError.mainFile);
-                } else {
-                    let extensions = [];
-                    let importer = this.modelLoaderUI.GetImporter ();
-                    let fileList = importer.GetFileList ().GetFiles ();
-                    for (let i = 0; i < fileList.length; i++) {
-                        let extension = fileList[i].extension;
-                        extensions.push (extension);
-                    }
-                    extensionStr = extensions.join (',');
-                }
-                if (importError.code === ImportErrorCode.NoImportableFile) {
-                    HandleEvent ('no_importable_file', extensionStr);
-                } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
-                    HandleEvent ('failed_to_load_file', extensionStr);
-                } else if (importError.code === ImportErrorCode.ImportFailed) {
-                    HandleEvent ('import_failed', extensionStr, {
-                        error_message : importError.message
-                    });
-                }
-            }
-        });
+        console.log(files, 'files');
+        console.log(settings, 'settings');
+        // this.modelLoaderUI.LoadModel (files, settings, {
+        //     onStart : () =>
+        //     {
+        //     console.log('loading start');
+
+        //         this.SetUIState (WebsiteUIState.Loading);
+        //         this.ClearModel ();
+        //     },
+        //     onFinish : (importResult, threeObject) =>
+        //     {
+        //         this.SetUIState (WebsiteUIState.Model);
+        //         this.OnModelLoaded (importResult, threeObject);
+        //         let importedExtension = GetFileExtension (importResult.mainFile);
+        //         HandleEvent ('model_loaded', importedExtension);
+        //     },
+        //     onRender : () =>
+        //     {
+        //         this.viewer.Render ();
+        //     },
+        //     onError : (importError) =>
+        //     {
+        //         this.SetUIState (WebsiteUIState.Intro);
+        //         let extensionStr = null;
+        //         if (importError.mainFile !== null) {
+        //             extensionStr = GetFileExtension (importError.mainFile);
+        //         } else {
+        //             let extensions = [];
+        //             let importer = this.modelLoaderUI.GetImporter ();
+        //             let fileList = importer.GetFileList ().GetFiles ();
+        //             for (let i = 0; i < fileList.length; i++) {
+        //                 let extension = fileList[i].extension;
+        //                 extensions.push (extension);
+        //             }
+        //             extensionStr = extensions.join (',');
+        //         }
+        //         if (importError.code === ImportErrorCode.NoImportableFile) {
+        //             HandleEvent ('no_importable_file', extensionStr);
+        //         } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
+        //             HandleEvent ('failed_to_load_file', extensionStr);
+        //         } else if (importError.code === ImportErrorCode.ImportFailed) {
+        //             HandleEvent ('import_failed', extensionStr, {
+        //                 error_message : importError.message
+        //             });
+        //         }
+        //     }
+        // });
+
+        // Upload to backend via Axios
+
+        this.UploadModelToServer(files, settings?.mainFile)
+            .then(() => {
+                this.SetUIState(WebsiteUIState.Model);
+            })
+            .catch(() => {
+                this.SetUIState(WebsiteUIState.Intro);
+            });
     }
 
     ClearHashIfNotOnlyUrlList ()
@@ -760,6 +795,7 @@ export class Website
 
         this.parameters.fileInput.addEventListener ('change', (ev) => {
             if (ev.target.files.length > 0) {
+                console.log('model load started');
                 HandleEvent ('model_load_started', 'open_file');
                 this.LoadModelFromFileList (ev.target.files);
             }

@@ -64,6 +64,7 @@
 		"http-server": "^14.0.0",
 		"jsdoc": "^4.0.4",
 		"mocha": "^11.5.0",
+		"opener": "^1.5.2",
 		"oslllo-svg-fixer": "^3.0.0",
 		"rollup": "^4.41.0",
 		"run-python3": "^0.0.5",
@@ -72,7 +73,9 @@
 	},
 	"dependencies": {
 		"@simonwep/pickr": "1.9.0",
+		"axios": "^1.12.2",
 		"fflate": "0.8.2",
+		"process": "^0.11.10",
 		"three": "0.176.0"
 	},
 	"eslintConfig": {
