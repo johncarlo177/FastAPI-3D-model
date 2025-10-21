@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+sqlalchemy
+psycopg2-binary
+alembic
+python-multipart
+python-magic
+trimesh
+meshio
