@@ -7,3 +7,4 @@ python-multipart
 python-magic
 trimesh
 meshio
+scipy

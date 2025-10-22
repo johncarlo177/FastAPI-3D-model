@@ -229,8 +229,6 @@ class SettingsModelDisplaySection extends SettingsSection
             this.callbacks.onBackgroundColorChanged ();
         });
 
-        AddDiv (backgroundColorDiv, null, Loc ('Color'));
-
         this.environmentMapPhongDiv = AddDiv (this.contentDiv, 'ov_sidebar_parameter');
         this.environmentMapPhongInput = AddDiv (this.environmentMapPhongDiv, 'ov_sidebar_image_picker');
         AddDiv (this.environmentMapPhongDiv, null, Loc ('Background Image'));

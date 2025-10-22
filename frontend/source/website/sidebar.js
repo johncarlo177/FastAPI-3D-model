@@ -2,6 +2,7 @@ import { GetDomElementOuterWidth, SetDomElementOuterHeight, SetDomElementOuterWi
 import { PanelSet } from './panelset.js';
 import { SidebarDetailsPanel } from './sidebardetailspanel.js';
 import { SidebarSettingsPanel } from './sidebarsettingspanel.js';
+import { SidebarUpdateDetailsPanel } from './sidebarupdatedetailspanel.js';
 
 export class Sidebar
 {
@@ -11,11 +12,13 @@ export class Sidebar
         this.panelSet = new PanelSet (mainDiv);
 
         this.detailsPanel = new SidebarDetailsPanel (this.panelSet.GetContentDiv ());
+        this.updatedetailsPanel = new SidebarUpdateDetailsPanel (this.panelSet.GetContentDiv ());
         this.settingsPanel = new SidebarSettingsPanel (this.panelSet.GetContentDiv (), settings);
 
         this.panelSet.AddPanel (this.detailsPanel);
         this.panelSet.AddPanel (this.settingsPanel);
         this.panelSet.ShowPanel (this.detailsPanel);
+        this.panelSet.AddPanel (this.updatedetailsPanel);
     }
 
     IsPanelsVisible ()
