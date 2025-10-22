@@ -103,10 +103,13 @@ export class Sidebar
     AddObject3DProperties (model, object3D)
     {
         this.detailsPanel.AddObject3DProperties (model, object3D);
+        this.updatedetailsPanel.AddObject3DProperties(model, object3D);
     }
+    
 
     AddMaterialProperties (material)
     {
         this.detailsPanel.AddMaterialProperties (material);
+        this.updatedetailsPanel.AddMaterialProperties (material);
     }
 }
