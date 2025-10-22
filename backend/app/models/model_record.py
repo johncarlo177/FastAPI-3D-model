@@ -1,8 +1,6 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
-
-Base = declarative_base()
+from app.core.config import Base
 
 class ModelRecord(Base):
     __tablename__ = "models"
