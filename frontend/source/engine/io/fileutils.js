@@ -40,7 +40,6 @@ export function GetFileName (filePath)
 
 export function GetFileExtension (filePath)
 {
-	console.log(filePath, 'filePath');
 	let fileName = GetFileName (filePath);
 	let firstPoint = fileName.lastIndexOf ('.');
 	if (firstPoint === -1) {

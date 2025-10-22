@@ -501,13 +501,10 @@ export class Website
                 let fileToUpload;
 
                 if (f instanceof File) {
-                    // Directly from <input type="file">
                     fileToUpload = f;
                 } else if (f.data instanceof File) {
-                    // Some custom wrapper { name, data: File }
                     fileToUpload = f.data;
                 } else if (typeof f.data === 'string') {
-                    // Path or URL case
                     const response = await fetch(f.data);
                     const blob = await response.blob();
                     fileToUpload = new File([blob], f.name, { type: blob.type || 'application/octet-stream' });
@@ -515,92 +512,87 @@ export class Website
                     throw new Error('Invalid file format');
                 }
 
-                console.log('Appending file:', fileToUpload.name, fileToUpload.size);
                 formData.append('files', fileToUpload);
-            }
-
-            // Optional: debug
-            for (let [key, value] of formData.entries()) {
-                console.log('FormData entry:', key, value);
             }
 
             const response = await axiosInstance.post('/api/upload-model', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            console.log('Server response:', response.data);
             if (response.data.status === 'ok') {
                 HandleEvent('model_loaded', response.data.extension);
+                return response.data; // <-- return backend response
+            } else {
+                throw new Error('Upload failed');
             }
 
         } catch (error) {
             console.error('Upload error:', error.response ? error.response.data : error.message);
             HandleEvent('failed_to_load_file', files.map(f => f.name).join(','));
+            return null;
         }
     }
 
-    LoadModelFromInputFiles (files, settings)
+    async LoadModelFromInputFiles (files, settings)
     {
-        // Upload to backend via Axios
-        this.UploadModelToServer(files, settings?.mainFile)
-            .then(() => {
-                this.SetUIState(WebsiteUIState.Model);
-            })
-            .catch(() => {
-                this.SetUIState(WebsiteUIState.Intro);
-            });
+        const savedFiles = await this.UploadModelToServer(files);
+        if (!savedFiles) return;
+        const path = savedFiles.static_url; // now it should be available
+        const fileObjects = [
+            {
+                name: path.split('/').pop(),
+                source: 1,
+                data: `http://127.0.0.1:8000${path}`,
+            }
+        ];
+
+        this.modelLoaderUI.LoadModel (fileObjects, settings, {
+            onStart : () =>
+            {
+                this.SetUIState (WebsiteUIState.Loading);
+                this.ClearModel ();
+            },
+            onFinish : (importResult, threeObject) =>
+            {
+                console.log(importResult, 'importResult');
+                console.log(threeObject, 'threeObject');
+                this.SetUIState (WebsiteUIState.Model);
+                this.OnModelLoaded (importResult, threeObject);
+                let importedExtension = GetFileExtension (importResult.mainFile);
+                HandleEvent ('model_loaded', importedExtension);
+            },
+            onRender : () =>
+            {
+                this.viewer.Render ();
+            },
+            onError : (importError) =>
+            {
+                this.SetUIState (WebsiteUIState.Intro);
+                let extensionStr = null;
+                if (importError.mainFile !== null) {
+                    extensionStr = GetFileExtension (importError.mainFile);
+                } else {
+                    let extensions = [];
+                    let importer = this.modelLoaderUI.GetImporter ();
+                    let fileList = importer.GetFileList ().GetFiles ();
+                    for (let i = 0; i < fileList.length; i++) {
+                        let extension = fileList[i].extension;
+                        extensions.push (extension);
+                    }
+                    extensionStr = extensions.join (',');
+                }
+                if (importError.code === ImportErrorCode.NoImportableFile) {
+                    HandleEvent ('no_importable_file', extensionStr);
+                } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
+                    HandleEvent ('failed_to_load_file', extensionStr);
+                } else if (importError.code === ImportErrorCode.ImportFailed) {
+                    HandleEvent ('import_failed', extensionStr, {
+                        error_message : importError.message
+                    });
+                }
+            }
+        });
     }
-
-    // LoadModelFromInputFiles (files, settings)
-    // {
-    //     this.modelLoaderUI.LoadModel (files, settings, {
-    //         onStart : () =>
-    //         {
-    //             this.SetUIState (WebsiteUIState.Loading);
-    //             this.ClearModel ();
-    //         },
-    //         onFinish : (importResult, threeObject) =>
-    //         {
-    //             console.log(importResult, 'importResult');
-    //             console.log(threeObject, 'threeObject');
-    //             this.SetUIState (WebsiteUIState.Model);
-    //             this.OnModelLoaded (importResult, threeObject);
-    //             let importedExtension = GetFileExtension (importResult.mainFile);
-    //             HandleEvent ('model_loaded', importedExtension);
-    //         },
-    //         onRender : () =>
-    //         {
-    //             this.viewer.Render ();
-    //         },
-    //         onError : (importError) =>
-    //         {
-    //             this.SetUIState (WebsiteUIState.Intro);
-    //             let extensionStr = null;
-    //             if (importError.mainFile !== null) {
-    //                 extensionStr = GetFileExtension (importError.mainFile);
-    //             } else {
-    //                 let extensions = [];
-    //                 let importer = this.modelLoaderUI.GetImporter ();
-    //                 let fileList = importer.GetFileList ().GetFiles ();
-    //                 for (let i = 0; i < fileList.length; i++) {
-    //                     let extension = fileList[i].extension;
-    //                     extensions.push (extension);
-    //                 }
-    //                 extensionStr = extensions.join (',');
-    //             }
-    //             if (importError.code === ImportErrorCode.NoImportableFile) {
-    //                 HandleEvent ('no_importable_file', extensionStr);
-    //             } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
-    //                 HandleEvent ('failed_to_load_file', extensionStr);
-    //             } else if (importError.code === ImportErrorCode.ImportFailed) {
-    //                 HandleEvent ('import_failed', extensionStr, {
-    //                     error_message : importError.message
-    //                 });
-    //             }
-    //         }
-    //     });
-    // }
-
 
     ClearHashIfNotOnlyUrlList ()
     {
