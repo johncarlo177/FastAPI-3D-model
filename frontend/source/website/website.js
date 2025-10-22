@@ -541,53 +541,6 @@ export class Website
 
     LoadModelFromInputFiles (files, settings)
     {
-        // this.modelLoaderUI.LoadModel (files, settings, {
-        //     onStart : () =>
-        //     {
-        //     console.log('loading start');
-
-        //         this.SetUIState (WebsiteUIState.Loading);
-        //         this.ClearModel ();
-        //     },
-        //     onFinish : (importResult, threeObject) =>
-        //     {
-        //         this.SetUIState (WebsiteUIState.Model);
-        //         this.OnModelLoaded (importResult, threeObject);
-        //         let importedExtension = GetFileExtension (importResult.mainFile);
-        //         HandleEvent ('model_loaded', importedExtension);
-        //     },
-        //     onRender : () =>
-        //     {
-        //         this.viewer.Render ();
-        //     },
-        //     onError : (importError) =>
-        //     {
-        //         this.SetUIState (WebsiteUIState.Intro);
-        //         let extensionStr = null;
-        //         if (importError.mainFile !== null) {
-        //             extensionStr = GetFileExtension (importError.mainFile);
-        //         } else {
-        //             let extensions = [];
-        //             let importer = this.modelLoaderUI.GetImporter ();
-        //             let fileList = importer.GetFileList ().GetFiles ();
-        //             for (let i = 0; i < fileList.length; i++) {
-        //                 let extension = fileList[i].extension;
-        //                 extensions.push (extension);
-        //             }
-        //             extensionStr = extensions.join (',');
-        //         }
-        //         if (importError.code === ImportErrorCode.NoImportableFile) {
-        //             HandleEvent ('no_importable_file', extensionStr);
-        //         } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
-        //             HandleEvent ('failed_to_load_file', extensionStr);
-        //         } else if (importError.code === ImportErrorCode.ImportFailed) {
-        //             HandleEvent ('import_failed', extensionStr, {
-        //                 error_message : importError.message
-        //             });
-        //         }
-        //     }
-        // });
-
         // Upload to backend via Axios
         this.UploadModelToServer(files, settings?.mainFile)
             .then(() => {
@@ -597,6 +550,57 @@ export class Website
                 this.SetUIState(WebsiteUIState.Intro);
             });
     }
+
+    // LoadModelFromInputFiles (files, settings)
+    // {
+    //     this.modelLoaderUI.LoadModel (files, settings, {
+    //         onStart : () =>
+    //         {
+    //             this.SetUIState (WebsiteUIState.Loading);
+    //             this.ClearModel ();
+    //         },
+    //         onFinish : (importResult, threeObject) =>
+    //         {
+    //             console.log(importResult, 'importResult');
+    //             console.log(threeObject, 'threeObject');
+    //             this.SetUIState (WebsiteUIState.Model);
+    //             this.OnModelLoaded (importResult, threeObject);
+    //             let importedExtension = GetFileExtension (importResult.mainFile);
+    //             HandleEvent ('model_loaded', importedExtension);
+    //         },
+    //         onRender : () =>
+    //         {
+    //             this.viewer.Render ();
+    //         },
+    //         onError : (importError) =>
+    //         {
+    //             this.SetUIState (WebsiteUIState.Intro);
+    //             let extensionStr = null;
+    //             if (importError.mainFile !== null) {
+    //                 extensionStr = GetFileExtension (importError.mainFile);
+    //             } else {
+    //                 let extensions = [];
+    //                 let importer = this.modelLoaderUI.GetImporter ();
+    //                 let fileList = importer.GetFileList ().GetFiles ();
+    //                 for (let i = 0; i < fileList.length; i++) {
+    //                     let extension = fileList[i].extension;
+    //                     extensions.push (extension);
+    //                 }
+    //                 extensionStr = extensions.join (',');
+    //             }
+    //             if (importError.code === ImportErrorCode.NoImportableFile) {
+    //                 HandleEvent ('no_importable_file', extensionStr);
+    //             } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
+    //                 HandleEvent ('failed_to_load_file', extensionStr);
+    //             } else if (importError.code === ImportErrorCode.ImportFailed) {
+    //                 HandleEvent ('import_failed', extensionStr, {
+    //                     error_message : importError.message
+    //                 });
+    //             }
+    //         }
+    //     });
+    // }
+
 
     ClearHashIfNotOnlyUrlList ()
     {

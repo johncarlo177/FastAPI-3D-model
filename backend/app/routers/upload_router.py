@@ -55,10 +55,10 @@ async def upload_model(files: list[UploadFile] = File(...)):
         "uuid": uid,
         "filename": rec.filename,
         "extension": rec.extension,
-        "vertices_count": vertices_count,
-        "triangles_count": triangles_count,
-        "size": {"x": size_x, "y": size_y, "z": size_z},
-        "volume": volume,
-        "surface_area": surface_area,
+        # "vertices_count": vertices_count,
+        # "triangles_count": triangles_count,
+        # "size": {"x": size_x, "y": size_y, "z": size_z},
+        # "volume": volume,
+        # "surface_area": surface_area,
         "static_url": f"/static/models/{uid}/{rec.filename}"
     }

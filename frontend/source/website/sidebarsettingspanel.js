@@ -15,7 +15,6 @@ import { MaterialSource } from '../engine/main.js';
 
 function AddColorPicker (parentDiv, opacity, defaultColor, predefinedColors, onChange)
 {
-    console.log('add color picker');
     let pickr = Pickr.create ({
         el : parentDiv,
         theme : 'monolith',
