@@ -1,109 +1,329 @@
+import { RunTaskAsync } from '../engine/core/taskrunner.js';
 import { SubCoord3D } from '../engine/geometry/coord3d.js';
 import { GetBoundingBox } from '../engine/model/modelutils.js';
-import { AddDiv } from '../engine/viewer/domutils.js';
+import { Property, PropertyToString, PropertyType } from '../engine/model/property.js';
+import { AddDiv, AddDomElement, ClearDomElement } from '../engine/viewer/domutils.js';
 import { SidebarPanel } from './sidebarpanel.js';
+import { CreateInlineColorCircle } from './utils.js';
+import { GetFileName, IsUrl } from '../engine/io/fileutils.js';
+import { MaterialSource, MaterialType } from '../engine/model/material.js';
+import { RGBColorToHexString } from '../engine/model/color.js';
+import { Unit } from '../engine/model/unit.js';
 import { Loc } from '../engine/core/localization.js';
 
-export class SidebarUpdateDetailsPanel extends SidebarPanel
-{
-    constructor (parentDiv)
-    {
-        super (parentDiv);
-        this.values = {}; // store editable values
+function UnitToString(unit) {
+    switch (unit) {
+        case Unit.Millimeter:
+            return Loc('Millimeter');
+        case Unit.Centimeter:
+            return Loc('Centimeter');
+        case Unit.Meter:
+            return Loc('Meter');
+        case Unit.Inch:
+            return Loc('Inch');
+        case Unit.Foot:
+            return Loc('Foot');
+    }
+    return Loc('Unknown');
+}
+
+export class SidebarUpdateDetailsPanel extends SidebarPanel {
+    constructor(parentDiv) {
+        super(parentDiv);
+        this.currentModel = null;
+        this.currentObject = null;
+        this.currentMaterial = null;
+        this.allProperties = [];
     }
 
-    GetName ()
-    {
-        return Loc('Update Parameter');
+    GetName() {
+        return Loc('Update Properties');
     }
 
-    GetIcon ()
-    {
+    GetIcon() {
         return 'settings';
     }
 
-    AddObject3DProperties (model, object3D)
-    {
+    AddObject3DProperties(model, object3D) {
         this.Clear();
-        const table = AddDiv(this.contentDiv, 'ov_property_table');
+        this.currentModel = model;
+        this.currentObject = object3D;
+        this.allProperties = [];
 
-        const boundingBox = GetBoundingBox(object3D);
-        const size = SubCoord3D(boundingBox.max, boundingBox.min);
+        let table = AddDiv(this.contentDiv, 'ov_property_table');
+        let boundingBox = GetBoundingBox(object3D);
+        let size = SubCoord3D(boundingBox.max, boundingBox.min);
+        let unit = model.GetUnit();
 
-        // Editable fields for X/Y/Z
-        this.AddEditableProperty(table, 'Size X', size.x, true);
-        this.AddEditableProperty(table, 'Size Y', size.y, true);
-        this.AddEditableProperty(table, 'Size Z', size.z, true);
+        this.AddProperty(table, new Property(PropertyType.Integer, Loc('Vertices'), object3D.VertexCount()));
+        let lineSegmentCount = object3D.LineSegmentCount();
+        if (lineSegmentCount > 0) {
+            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Lines'), lineSegmentCount));
+        }
+        let triangleCount = object3D.TriangleCount();
+        if (triangleCount > 0) {
+            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Triangles'), triangleCount));
+        }
+        if (unit !== Unit.Unknown) {
+            this.AddProperty(table, new Property(PropertyType.Text, Loc('Unit'), UnitToString(unit)));
+        }
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size X'), size.x));
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Y'), size.y));
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Z'), size.z));
 
+        if (object3D.PropertyGroupCount() > 0) {
+            let customTable = AddDiv(this.contentDiv, 'ov_property_table ov_property_table_custom');
+            for (let i = 0; i < object3D.PropertyGroupCount(); i++) {
+                const propertyGroup = object3D.GetPropertyGroup(i);
+                this.AddPropertyGroup(customTable, propertyGroup);
+                for (let j = 0; j < propertyGroup.PropertyCount(); j++) {
+                    const property = propertyGroup.GetProperty(j);
+                    this.AddPropertyInGroup(customTable, property);
+                }
+            }
+        }
+
+        this.AddActionButtons();
         this.Resize();
     }
 
-    // Creates a property row with editable button
-    AddEditableProperty (table, label, value, editable)
-    {
-        const row = AddDiv(table, 'ov_property_table_row');
-        row.style.display = 'flex';
-        row.style.alignItems = 'center';
-        AddDiv(row, 'ov_property_table_cell ov_property_table_name', label + ':');
-        const valueCell = AddDiv(row, 'ov_property_table_cell ov_property_table_value');
+    AddMaterialProperties(material) {
+        this.Clear();
+        this.currentMaterial = material;
+        this.allProperties = [];
 
-        const button = document.createElement('button');
-        const displayValue = this.FormatNumber(value);
-        button.textContent = displayValue;
-        button.className = 'ov_edit_button';
-        button.style.width = '100%';
-        button.style.height = '25px';
-        button.style.textAlign = 'left';
-
-        valueCell.appendChild(button);
-        this.values[label] = value;
-
-        if (editable) {
-            button.addEventListener('click', () => {
-                this.MakeEditable(button, label);
-            });
-        }
-    }
-
-    // Turns button into editable input
-    MakeEditable (button, label)
-    {
-        const currentValue = parseFloat(button.textContent);
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.value = currentValue;
-        input.step = '0.01'; // allows decimal editing
-        input.style.width = '93%';
-        input.style.height = '25px';
-        input.className = 'ov_edit_input';
-
-        button.replaceWith(input);
-        input.focus();
-
-        const saveValue = () => {
-            const newValue = parseFloat(input.value);
-            this.values[label] = newValue;
-            input.replaceWith(button);
-            button.textContent = this.FormatNumber(newValue);
+        const AddTextureMap = (obj, table, name, map) => {
+            if (map === null || map.name === null) {
+                return;
+            }
+            let fileName = GetFileName(map.name);
+            obj.AddProperty(table, new Property(PropertyType.Text, name, fileName));
         };
 
-        input.addEventListener('blur', saveValue);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                saveValue();
+        let table = AddDiv(this.contentDiv, 'ov_property_table');
+        let typeString = null;
+        if (material.type === MaterialType.Phong) {
+            typeString = Loc('Phong');
+        } else if (material.type === MaterialType.Physical) {
+            typeString = Loc('Physical');
+        }
+        let materialSource = (material.source !== MaterialSource.Model) ? Loc('Default') : Loc('Model');
+        this.AddProperty(table, new Property(PropertyType.Text, Loc('Source'), materialSource));
+        this.AddProperty(table, new Property(PropertyType.Text, Loc('Type'), typeString));
+
+        if (material.vertexColors) {
+            this.AddProperty(table, new Property(PropertyType.Text, Loc('Color'), Loc('Vertex colors')));
+        } else {
+            this.AddProperty(table, new Property(PropertyType.Color, Loc('Color'), material.color));
+            if (material.type === MaterialType.Phong) {
+                this.AddProperty(table, new Property(PropertyType.Color, Loc('Ambient'), material.ambient));
+                this.AddProperty(table, new Property(PropertyType.Color, Loc('Specular'), material.specular));
             }
+        }
+        if (material.type === MaterialType.Physical) {
+            this.AddProperty(table, new Property(PropertyType.Percent, Loc('Metalness'), material.metalness));
+            this.AddProperty(table, new Property(PropertyType.Percent, Loc('Roughness'), material.roughness));
+        }
+        this.AddProperty(table, new Property(PropertyType.Percent, Loc('Opacity'), material.opacity));
+
+        AddTextureMap(this, table, Loc('Diffuse Map'), material.diffuseMap);
+        AddTextureMap(this, table, Loc('Bump Map'), material.bumpMap);
+        AddTextureMap(this, table, Loc('Normal Map'), material.normalMap);
+        AddTextureMap(this, table, Loc('Emissive Map'), material.emissiveMap);
+        if (material.type === MaterialType.Phong) {
+            AddTextureMap(this, table, Loc('Specular Map'), material.specularMap);
+        } else if (material.type === MaterialType.Physical) {
+            AddTextureMap(this, table, Loc('Metallic Map'), material.metalnessMap);
+        }
+
+        this.AddActionButtons();
+        this.Resize();
+    }
+
+    AddPropertyGroup(table, propertyGroup) {
+        let row = AddDiv(table, 'ov_property_table_row group', propertyGroup.name);
+        row.setAttribute('title', propertyGroup.name);
+    }
+
+    AddProperty(table, property) {
+        let row = AddDiv(table, 'ov_property_table_row');
+        let nameColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_name', property.name + ':');
+        let valueColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_value');
+        nameColumn.setAttribute('title', property.name);
+        nameColumn.style.width = '45%';
+        valueColumn.style.width = '45%';
+        this.DisplayPropertyValue(property, valueColumn);
+
+        // Add Edit Button
+        let editButton = AddDiv(row, 'ov_property_table_cell ov_property_table_edit', '<i class="fa-solid fa-marker"></i>');
+        editButton.style.cursor = 'pointer';
+        editButton.title = 'Edit this property';
+        editButton.addEventListener('click', () => {
+            this.MakePropertyEditable(property, valueColumn, editButton);
+        });
+
+        property._originalValue = property.value;
+        this.allProperties.push(property);
+        return row;
+    }
+
+    AddPropertyInGroup(table, property) {
+        let row = this.AddProperty(table, property);
+        row.classList.add('ingroup');
+    }
+
+    AddCalculatedProperty(table, name, calculateValue) {
+        let row = AddDiv(table, 'ov_property_table_row');
+        let nameColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_name', name + ':');
+        let valueColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_value');
+        nameColumn.setAttribute('title', name);
+
+        let calculateButton = AddDiv(valueColumn, 'ov_property_table_button', Loc('Calculate...'));
+        calculateButton.addEventListener('click', () => {
+            ClearDomElement(valueColumn);
+            valueColumn.innerHTML = Loc('Please wait...');
+            RunTaskAsync(() => {
+                let propertyValue = calculateValue();
+                if (propertyValue === null) {
+                    valueColumn.innerHTML = '-';
+                } else {
+                    this.DisplayPropertyValue(propertyValue, valueColumn);
+                }
+            });
         });
     }
 
-    // Format number to 2 decimal places
-    FormatNumber (num)
-    {
-        if (typeof num !== 'number' || isNaN(num)) return num;
-        return parseFloat(num.toFixed(2));
+    MakePropertyEditable(property, valueColumn, editButton) {
+        const enterEditMode = () => {
+            ClearDomElement(valueColumn);
+
+            let inputEl;
+            if (
+                property.type === PropertyType.Number ||
+                property.type === PropertyType.Percent ||
+                property.type === PropertyType.Integer
+            ) {
+                inputEl = document.createElement('input');
+                inputEl.type = 'number';
+                inputEl.value = property.value;
+            } else if (property.type === PropertyType.Text) {
+                inputEl = document.createElement('input');
+                inputEl.type = 'text';
+                inputEl.value = property.value;
+            } else if (property.type === PropertyType.Color) {
+                inputEl = document.createElement('input');
+                inputEl.type = 'color';
+                inputEl.value = '#' + RGBColorToHexString(property.value);
+            } else {
+                inputEl = document.createElement('input');
+                inputEl.type = 'text';
+                inputEl.value = property.value;
+            }
+
+            inputEl.style.width = '90%';
+            valueColumn.appendChild(inputEl);
+            inputEl.focus();
+
+            inputEl.addEventListener('input', () => {
+                property.value = inputEl.value;
+            });
+
+            inputEl.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    exitEditMode();
+                }
+            });
+
+            inputEl.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (document.activeElement !== editButton) {
+                        exitEditMode();
+                    }
+                }, 100);
+            });
+
+            editButton.innerHTML = '<i class="fa-solid fa-check"></i>';
+            editButton.onclick = exitEditMode;
+        };
+
+        const exitEditMode = () => {
+            this.DisplayPropertyValue(property, valueColumn);
+            editButton.innerHTML = '<i class="fa-solid fa-marker"></i>';
+            editButton.onclick = enterEditMode;
+        };
+
+        // initial binding
+        editButton.innerHTML = '<i class="fa-solid fa-marker"></i>';
+        editButton.onclick = enterEditMode;
     }
 
-    GetUpdatedValues ()
-    {
-        return this.values;
+    DisplayPropertyValue(property, targetDiv) {
+        ClearDomElement(targetDiv);
+        let valueHtml = null;
+        let valueTitle = null;
+
+        if (property.type === PropertyType.Text) {
+            if (IsUrl(property.value)) {
+                valueHtml = `<a target="_blank" href="${property.value}">${property.value}</a>`;
+                valueTitle = property.value;
+            } else {
+                valueHtml = PropertyToString(property);
+            }
+        } else if (property.type === PropertyType.Color) {
+            let hexString = '#' + RGBColorToHexString(property.value);
+            let colorCircle = CreateInlineColorCircle(property.value);
+            targetDiv.appendChild(colorCircle);
+            AddDomElement(targetDiv, 'span', null, hexString);
+        } else {
+            valueHtml = PropertyToString(property);
+        }
+
+        if (valueHtml !== null) {
+            targetDiv.innerHTML = valueHtml;
+            targetDiv.setAttribute('title', valueTitle !== null ? valueTitle : valueHtml);
+        }
+    }
+
+    AddActionButtons() {
+        const buttonContainer = AddDiv(this.contentDiv, 'ov_action_buttons');
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.justifyContent = 'space-between';
+        buttonContainer.style.marginTop = '20px';
+
+        const resetButton = AddDiv(buttonContainer, 'ov_button reset', 'Reset');
+        resetButton.style.width = '45%';
+        resetButton.addEventListener('click', () => {
+            this.ResetProperties();
+        });
+
+        const saveButton = AddDiv(buttonContainer, 'ov_button save', 'Save');
+        saveButton.style.width = '45%';
+        saveButton.addEventListener('click', () => {
+            this.SaveProperties();
+        });
+    }
+
+    ResetProperties() {
+        for (let p of this.allProperties) {
+            if (p._originalValue !== undefined) {
+                p.value = p._originalValue;
+            }
+        }
+        this.RefreshPanel();
+    }
+
+    SaveProperties() {
+        console.log('Saving properties:', this.allProperties);
+        alert('Properties saved successfully!');
+        // TODO: Integrate backend save here
+    }
+
+    RefreshPanel() {
+        if (this.currentObject) {
+            this.AddObject3DProperties(this.currentModel, this.currentObject);
+        } else if (this.currentMaterial) {
+            this.AddMaterialProperties(this.currentMaterial);
+        }
     }
 }

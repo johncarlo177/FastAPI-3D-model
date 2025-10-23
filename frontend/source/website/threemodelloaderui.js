@@ -21,44 +21,64 @@ export class ThreeModelLoaderUI
         }
 
         let progressDialog = null;
-        this.modelLoader.LoadModel (inputFiles, settings, {
-            onLoadStart : () => {
-                this.CloseDialogIfOpen ();
-                callbacks.onStart ();
-                progressDialog = new ProgressDialog ();
-                progressDialog.Init (Loc ('Loading Model'));
-                progressDialog.Open ();
+        this.modelLoader.LoadModel(inputFiles, settings, {
+            onLoadStart: () => {
+                this.CloseDialogIfOpen();
+                callbacks.onStart();
+                progressDialog = new ProgressDialog();
+                progressDialog.Init(Loc('Loading Model'));
+                progressDialog.Open();
+
+                // Record when the dialog was opened
+                this._progressStartTime = Date.now();
             },
-            onFileListProgress : (current, total) => {
-            },
-            onFileLoadProgress : (current, total) => {
-            },
-            onSelectMainFile : (fileNames, selectFile) => {
-                progressDialog.Close ();
-                this.modalDialog = this.ShowFileSelectorDialog (fileNames, (index) => {
-                    progressDialog.Open ();
-                    selectFile (index);
+
+            onFileListProgress: (current, total) => {},
+            onFileLoadProgress: (current, total) => {},
+
+            onSelectMainFile: (fileNames, selectFile) => {
+                progressDialog.Close();
+                this.modalDialog = this.ShowFileSelectorDialog(fileNames, (index) => {
+                    progressDialog.Open();
+                    selectFile(index);
                 });
             },
-            onImportStart : () => {
-                progressDialog.SetText (Loc ('Importing Model'));
+
+            onImportStart: () => {
+                progressDialog.SetText(Loc('Importing Model'));
             },
-            onVisualizationStart : () => {
-                progressDialog.SetText (Loc ('Visualizing Model'));
+
+            onVisualizationStart: () => {
+                progressDialog.SetText(Loc('Visualizing Model'));
             },
-            onModelFinished : (importResult, threeObject) => {
-                progressDialog.Close ();
-                callbacks.onFinish (importResult, threeObject);
+
+            onModelFinished: async (importResult, threeObject) => {
+                const elapsed = Date.now() - this._progressStartTime;
+                if (elapsed < 1000) {
+                    // Wait remaining time to make sure dialog visible at least 1s
+                    await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
+                }
+
+                progressDialog.Close();
+                callbacks.onFinish(importResult, threeObject);
             },
-            onTextureLoaded : () => {
-                callbacks.onRender ();
+
+            onTextureLoaded: () => {
+                callbacks.onRender();
             },
-            onLoadError : (importError) => {
-                progressDialog.Close ();
-                callbacks.onError (importError);
-                this.modalDialog = this.ShowErrorDialog (importError);
+
+            onLoadError: async (importError) => {
+                const elapsed = Date.now() - this._progressStartTime;
+                if (elapsed < 1000) {
+                    await new Promise(resolve => setTimeout(resolve, 1000 - elapsed));
+                }
+
+                progressDialog.Close();
+                callbacks.onError(importError);
+                this.modalDialog = this.ShowErrorDialog(importError);
             },
         });
+
     }
 
     GetModelLoader ()
