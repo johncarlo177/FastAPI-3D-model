@@ -10,6 +10,7 @@ import { MaterialSource, MaterialType } from '../engine/model/material.js';
 import { RGBColorToHexString } from '../engine/model/color.js';
 import { Unit } from '../engine/model/unit.js';
 import { Loc } from '../engine/core/localization.js';
+import axiosInstance from './axios.js';
 
 function UnitToString(unit) {
     switch (unit) {
@@ -313,10 +314,41 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         this.RefreshPanel();
     }
 
-    SaveProperties() {
-        console.log('Saving properties:', this.allProperties);
-        alert('Properties saved successfully!');
-        // TODO: Integrate backend save here
+    async SaveProperties() {
+        try {
+            console.log(this.currentModel, 'ssssssssss');
+            if (!this.currentModel) {
+                console.warn('No current model to save.');
+                return;
+            }
+
+            // Prepare payload with all parameters (updated + unchanged)
+            const payload = {
+                modelId: this.currentModel.id || null, // Use your model identifier
+                properties: this.allProperties.map(p => ({
+                    name: p.name,
+                    value: p.value,
+                    type: p.type
+                }))
+            };
+
+            console.log('Saving all properties payload:', payload);
+
+            // Send POST request to backend
+            const response = await axiosInstance.post('/api/update-model-properties', payload);
+
+            console.log('Server response:', response.data);
+
+            if (response.data.status === 'ok') {
+                alert('Properties saved successfully!');
+            } else {
+                alert('Failed to save properties: ' + (response.data.message || 'Unknown error'));
+            }
+
+        } catch (error) {
+            console.error('Error saving properties:', error.response ? error.response.data : error.message);
+            alert('Error saving properties. Check console for details.');
+        }
     }
 
     RefreshPanel() {
