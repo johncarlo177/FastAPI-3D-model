@@ -4,7 +4,7 @@ from app.utils.mesh_utils import load_mesh_try
 from app.core.config import STATIC_ROOT, SessionLocal
 from app.models.model_record import ModelRecord
 from pathlib import Path
-import uuid
+import uuid, json
 
 router = APIRouter(prefix="/api", tags=["Upload"])
 
@@ -28,7 +28,13 @@ async def upload_model(files: list[UploadFile] = File(...)):
     volume = float(getattr(mesh, "volume", 0.0))
     surface_area = float(getattr(mesh, "area", 0.0))
 
+    ## import json
+    camera_json_path = Path(__file__).parent.parent / "models" / "CAMERA.json"
+    with open(camera_json_path, "r") as f:
+        camera_data = json.load(f)
+
     db = SessionLocal()
+
     try:
         rec = ModelRecord(
             uuid=uid,
@@ -55,10 +61,6 @@ async def upload_model(files: list[UploadFile] = File(...)):
         "uuid": uid,
         "filename": rec.filename,
         "extension": rec.extension,
-        # "vertices_count": vertices_count,
-        # "triangles_count": triangles_count,
-        # "size": {"x": size_x, "y": size_y, "z": size_z},
-        # "volume": volume,
-        # "surface_area": surface_area,
-        "static_url": f"/static/models/{uid}/{rec.filename}"
+        "static_url": f"/static/models/{uid}/{rec.filename}",
+        "json": camera_data
     }

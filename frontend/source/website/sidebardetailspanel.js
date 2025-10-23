@@ -46,7 +46,7 @@ export class SidebarDetailsPanel extends SidebarPanel
         return 'details';
     }
 
-    AddObject3DProperties (model, object3D)
+    AddObject3DProperties (model, object3D, result)
     {
         this.Clear ();
         let table = AddDiv (this.contentDiv, 'ov_property_table');
@@ -88,6 +88,38 @@ export class SidebarDetailsPanel extends SidebarPanel
                     const property = propertyGroup.GetProperty (j);
                     this.AddPropertyInGroup (customTable, property);
                 }
+            }
+        }
+
+        // show parameters from backend
+        const json = result.json;
+        if (Array.isArray(json)) {
+            // Filter items: name includes "Extrude" and dimensions > 2
+            const extrudes = json.filter(item =>
+                item.name && item.name.includes('Extrude') &&
+                Array.isArray(item.dimensions) && item.dimensions.length > 2
+            );
+
+            if (extrudes.length > 0) {
+                const extrudeTable = AddDiv(this.contentDiv, 'ov_property_table ov_property_table_custom');
+
+                extrudes.forEach(item => {
+                    // Add name as a group header
+                    this.AddPropertyGroup(extrudeTable, { name: item.name });
+
+                    // Add each dimension
+                    item.dimensions.forEach(dim => {
+                        if (dim && typeof dim.value === 'number') {
+                            const scaledValue = dim.value * 1000;
+                            this.AddPropertyInGroup(
+                                extrudeTable,
+                                new Property(PropertyType.Number, dim.name, scaledValue)
+                            );
+                        }
+                    });
+                });
+            } else {
+                console.warn('No Extrude items with more than 2 dimensions found.');
             }
         }
         this.Resize ();

@@ -45,7 +45,7 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         return 'settings';
     }
 
-    AddObject3DProperties(model, object3D) {
+    AddObject3DProperties(model, object3D, result) {
         this.Clear();
         this.currentModel = model;
         this.currentObject = object3D;
@@ -56,21 +56,21 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         let size = SubCoord3D(boundingBox.max, boundingBox.min);
         let unit = model.GetUnit();
 
-        this.AddProperty(table, new Property(PropertyType.Integer, Loc('Vertices'), object3D.VertexCount()));
+        this.AddProperty(table, new Property(PropertyType.Integer, Loc('Vertices'), object3D.VertexCount()), false);
         let lineSegmentCount = object3D.LineSegmentCount();
         if (lineSegmentCount > 0) {
-            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Lines'), lineSegmentCount));
+            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Lines'), lineSegmentCount), false);
         }
         let triangleCount = object3D.TriangleCount();
         if (triangleCount > 0) {
-            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Triangles'), triangleCount));
+            this.AddProperty(table, new Property(PropertyType.Integer, Loc('Triangles'), triangleCount), false);
         }
         if (unit !== Unit.Unknown) {
-            this.AddProperty(table, new Property(PropertyType.Text, Loc('Unit'), UnitToString(unit)));
+            this.AddProperty(table, new Property(PropertyType.Text, Loc('Unit'), UnitToString(unit)), false);
         }
-        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size X'), size.x));
-        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Y'), size.y));
-        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Z'), size.z));
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size X'), size.x), false);
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Y'), size.y), false);
+        this.AddProperty(table, new Property(PropertyType.Number, Loc('Size Z'), size.z), false);
 
         if (object3D.PropertyGroupCount() > 0) {
             let customTable = AddDiv(this.contentDiv, 'ov_property_table ov_property_table_custom');
@@ -81,6 +81,39 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
                     const property = propertyGroup.GetProperty(j);
                     this.AddPropertyInGroup(customTable, property);
                 }
+            }
+        }
+
+        // show parameters from backend
+        const json = result.json;
+        if (Array.isArray(json)) {
+            // Filter items: name includes "Extrude" and dimensions > 2
+            const extrudes = json.filter(item =>
+                item.name && item.name.includes('Extrude') &&
+                Array.isArray(item.dimensions) && item.dimensions.length > 2
+            );
+
+            if (extrudes.length > 0) {
+                const extrudeTable = AddDiv(this.contentDiv, 'ov_property_table ov_property_table_custom');
+
+                extrudes.forEach(item => {
+                    // Add name as a group header
+                    this.AddPropertyGroup(extrudeTable, { name: item.name });
+
+                    // Add each dimension
+                    item.dimensions.forEach(dim => {
+                        if (dim && typeof dim.value === 'number') {
+                            const scaledValue = dim.value * 1000;
+                            this.AddPropertyInGroup(
+                                extrudeTable,
+                                new Property(PropertyType.Number, dim.name, scaledValue),
+                                true // ✅ editable
+                            );
+                        }
+                    });
+                });
+            } else {
+                console.warn('No Extrude items with more than 2 dimensions found.');
             }
         }
 
@@ -146,7 +179,7 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         row.setAttribute('title', propertyGroup.name);
     }
 
-    AddProperty(table, property) {
+    AddProperty(table, property, editable = true) {
         let row = AddDiv(table, 'ov_property_table_row');
         let nameColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_name', property.name + ':');
         let valueColumn = AddDiv(row, 'ov_property_table_cell ov_property_table_value');
@@ -155,21 +188,24 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         valueColumn.style.width = '45%';
         this.DisplayPropertyValue(property, valueColumn);
 
-        // Add Edit Button
-        let editButton = AddDiv(row, 'ov_property_table_cell ov_property_table_edit', '<i class="fa-solid fa-marker"></i>');
-        editButton.style.cursor = 'pointer';
-        editButton.title = 'Edit this property';
-        editButton.addEventListener('click', () => {
-            this.MakePropertyEditable(property, valueColumn, editButton);
-        });
+        if (editable) {
+            // Add Edit Button
+            let editButton = AddDiv(row, 'ov_property_table_cell ov_property_table_edit', '<i class="fa-solid fa-marker"></i>');
+            editButton.style.cursor = 'pointer';
+            editButton.title = 'Edit this property';
+            editButton.addEventListener('click', () => {
+                this.MakePropertyEditable(property, valueColumn, editButton);
+            });
+        }
 
         property._originalValue = property.value;
         this.allProperties.push(property);
         return row;
     }
 
-    AddPropertyInGroup(table, property) {
-        let row = this.AddProperty(table, property);
+
+    AddPropertyInGroup(table, property, editable = true) {
+        let row = this.AddProperty(table, property, editable);
         row.classList.add('ingroup');
     }
 

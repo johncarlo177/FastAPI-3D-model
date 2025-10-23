@@ -13,7 +13,7 @@ def save_uploaded_files(upload_folder: Path, files: List[UploadFile]):
         with dest.open("wb") as out_file:
             shutil.copyfileobj(f.file, out_file)
 
-        # Now you can safely use Path(dest)
+        ## safely use Path(dest)
         print(f"Saved file: {dest}, size: {dest.stat().st_size}, suffix: {dest.suffix}")
         saved_paths.append(dest)
 

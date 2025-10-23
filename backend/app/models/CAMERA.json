@@ -1,0 +1,204 @@
+[
+  {
+    "name": "Comments",
+    "type": "CommentsFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Favorites",
+    "type": "FavoriteFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "History",
+    "type": "HistoryFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Selection Sets",
+    "type": "SelectionSetFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Sensors",
+    "type": "SensorFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Design Binder",
+    "type": "DocsFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Annotations",
+    "type": "DetailCabinet",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Surface Bodies",
+    "type": "SurfaceBodyFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Solid Bodies",
+    "type": "SolidBodyFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Lights and Cameras",
+    "type": "EnvFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Markups",
+    "type": "InkMarkupFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Equations",
+    "type": "EqnFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Material \u003Cnot specified\u003E",
+    "type": "MaterialFolder",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Front Plane",
+    "type": "RefPlane",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Top Plane",
+    "type": "RefPlane",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Right Plane",
+    "type": "RefPlane",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "Origin",
+    "type": "OriginProfileFeature",
+    "dimensions": [],
+    "subFeatures": []
+  },
+  {
+    "name": "front_plane",
+    "type": "ProfileFeature",
+    "dimensions": [
+      {
+        "name": "width",
+        "fullName": "width@front_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.1
+      },
+      {
+        "name": "height",
+        "fullName": "height@front_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.05
+      }
+    ],
+    "subFeatures": []
+  },
+  {
+    "name": "Rect_Extrude",
+    "type": "Extrusion",
+    "dimensions": [
+      {
+        "name": "D1",
+        "fullName": "D1@Rect_Extrude@CAMERA.Part",
+        "type": "0",
+        "value": 0.02
+      },
+      {
+        "name": "width",
+        "fullName": "width@front_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.1
+      },
+      {
+        "name": "height",
+        "fullName": "height@front_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.05
+      }
+    ],
+    "subFeatures": []
+  },
+  {
+    "name": "top_plane",
+    "type": "ProfileFeature",
+    "dimensions": [
+      {
+        "name": "diameter",
+        "fullName": "diameter@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.025
+      },
+      {
+        "name": "circle_x_position",
+        "fullName": "circle_x_position@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.05
+      },
+      {
+        "name": "circle_y_position",
+        "fullName": "circle_y_position@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.025
+      }
+    ],
+    "subFeatures": []
+  },
+  {
+    "name": "Circle_Extrude",
+    "type": "ICE",
+    "dimensions": [
+      {
+        "name": "D1",
+        "fullName": "D1@Circle_Extrude@CAMERA.Part",
+        "type": "0",
+        "value": 0.02
+      },
+      {
+        "name": "diameter",
+        "fullName": "diameter@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.025
+      },
+      {
+        "name": "circle_x_position",
+        "fullName": "circle_x_position@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.05
+      },
+      {
+        "name": "circle_y_position",
+        "fullName": "circle_y_position@top_plane@CAMERA.Part",
+        "type": "0",
+        "value": 0.025
+      }
+    ],
+    "subFeatures": []
+  }
+]

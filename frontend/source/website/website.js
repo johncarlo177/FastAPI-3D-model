@@ -184,6 +184,7 @@ class WebsiteLayouter
     }
 }
 
+let result = {};
 export class Website
 {
     constructor (parameters)
@@ -521,7 +522,8 @@ export class Website
 
             if (response.data.status === 'ok') {
                 HandleEvent('model_loaded', response.data.extension);
-                return response.data; // <-- return backend response
+                result = response.data;
+                return response.data;
             } else {
                 throw new Error('Upload failed');
             }
@@ -554,8 +556,6 @@ export class Website
             },
             onFinish : (importResult, threeObject) =>
             {
-                console.log(importResult, 'importResult');
-                console.log(threeObject, 'threeObject');
                 this.SetUIState (WebsiteUIState.Model);
                 this.OnModelLoaded (importResult, threeObject);
                 let importedExtension = GetFileExtension (importResult.mainFile);
@@ -979,11 +979,11 @@ export class Website
                 this.UpdateMeshesSelection ();
             },
             onSelectionCleared : () => {
-                this.sidebar.AddObject3DProperties (this.model, this.model);
+                this.sidebar.AddObject3DProperties (this.model, this.model, result);
             },
             onMeshSelected : (meshInstanceId) => {
                 let meshInstance = this.model.GetMeshInstance (meshInstanceId);
-                this.sidebar.AddObject3DProperties (this.model, meshInstance);
+                this.sidebar.AddObject3DProperties (this.model, meshInstance, result);
             },
             onMaterialSelected : (materialIndex) => {
                 this.sidebar.AddMaterialProperties (this.model.GetMaterial (materialIndex));
