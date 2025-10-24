@@ -51,7 +51,9 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         this.currentObject = object3D;
         this.allProperties = [];
 
+        this.result = result;
         this.lastResultJson = result.json;
+        this.originalJson = JSON.parse(JSON.stringify(result.json));
 
         let table = AddDiv(this.contentDiv, 'ov_property_table');
         let boundingBox = GetBoundingBox(object3D);
@@ -106,11 +108,10 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
                     item.dimensions.forEach(dim => {
                         if (dim && typeof dim.value === 'number') {
                             const scaledValue = dim.value * 1000;
-                            this.AddPropertyInGroup(
-                                extrudeTable,
-                                new Property(PropertyType.Number, dim.name, scaledValue),
-                                true // ✅ editable
-                            );
+
+                            const property = new Property(PropertyType.Number, dim.name, scaledValue);
+                            property._dimRef = dim;
+                            this.AddPropertyInGroup(extrudeTable, property, true);
                         }
                     });
                 });
@@ -288,6 +289,11 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
 
         const exitEditMode = () => {
             this.DisplayPropertyValue(property, valueColumn);
+
+            if (property._dimRef) {
+                property._dimRef.value = parseFloat(property.value) / 1000; // convert back to original scale
+            }
+
             editButton.innerHTML = '<i class="fa-solid fa-marker"></i>';
             editButton.onclick = enterEditMode;
         };
@@ -344,43 +350,34 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
     }
 
     ResetProperties() {
-        for (let p of this.allProperties) {
-            if (p._originalValue !== undefined) {
-                p.value = p._originalValue;
-            }
+        if (!this.originalJson) {
+            alert('No original data to reset.');
+            return;
         }
+
+        // Restore the JSON to original
+        this.lastResultJson = JSON.parse(JSON.stringify(this.originalJson));
+
+        // Re-render the panel with original values
         this.RefreshPanel();
     }
 
     async SaveProperties() {
         try {
-            console.log(this.currentModel, 'ssssssssss');
-            if (!this.currentModel) {
-                console.warn('No current model to save.');
+            if (!this.lastResultJson) {
+                alert('No data to save.');
                 return;
             }
-
-            // Prepare payload with all parameters (updated + unchanged)
-            const payload = {
-                modelId: this.currentModel.id || null, // Use your model identifier
-                properties: this.allProperties.map(p => ({
-                    name: p.name,
-                    value: p.value,
-                    type: p.type
-                }))
-            };
-
-            console.log('Saving all properties payload:', payload);
-
-            // Send POST request to backend
-            const response = await axiosInstance.post('/api/update-model-properties', payload);
-
-            console.log('Server response:', response.data);
+            console.log(this.result, 'result');
+            const response = await axiosInstance.post('/api/update-model', {
+                uuid: this.result.uuid,
+                json: this.lastResultJson,
+            });
 
             if (response.data.status === 'ok') {
                 alert('Properties saved successfully!');
             } else {
-                alert('Failed to save properties: ' + (response.data.message || 'Unknown error'));
+                alert('Failed to save: ' + (response.data.message || 'Unknown error'));
             }
 
         } catch (error) {

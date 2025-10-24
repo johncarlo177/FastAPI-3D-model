@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.routers import upload_router
+from app.routers import upload_router, update_router
 from app.core.config import CORS_ORIGINS, STATIC_ROOT, Base, engine
 
 # Create tables if not exists
@@ -22,3 +22,4 @@ app.mount("/static", StaticFiles(directory=STATIC_ROOT.parent), name="static")
 
 # include routes
 app.include_router(upload_router.router)
+app.include_router(update_router.router)
