@@ -407,7 +407,7 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
             });
 
             if (response.data.status === 'ok') {
-                console.log(response.data, 'response');
+                console.log(response.data, 'updated result response');
                 // Update originalJson to current state
                 this.originalJson = JSON.parse(JSON.stringify(this.lastResultJson));
             } else {
@@ -419,7 +419,6 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
             alert('Error saving properties. Check console for details.');
         }
     }
-
 
     RefreshPanel() {
         if (this.currentObject) {

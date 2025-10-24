@@ -7,4 +7,17 @@ const axiosInstance = axios.create({
   },
 });
 
+axiosInstance.interceptors.response.use(
+    (response) => {
+        if (response.config.url === '/api/update-model') {
+            // call the listener if exists
+            if (window.onUpdateModelResponse) {
+                window.onUpdateModelResponse(response.data);
+            }
+        }
+        return response;
+    },
+    (error) => Promise.reject(error)
+);
+
 export default axiosInstance;

@@ -535,64 +535,77 @@ export class Website
         }
     }
 
-    async LoadModelFromInputFiles (files, settings)
-    {
+    async LoadModelFromInputFiles(files, settings) {
         const savedFiles = await this.UploadModelToServer(files);
         if (!savedFiles) return;
-        const path = savedFiles.static_url; // now it should be available
-        const fileObjects = [
-            {
-                name: path.split('/').pop(),
-                source: 1,
-                data: `http://127.0.0.1:8000${path}`,
-            }
-        ];
 
-        this.modelLoaderUI.LoadModel (fileObjects, settings, {
-            onStart : () =>
-            {
-                this.SetUIState (WebsiteUIState.Loading);
-                this.ClearModel ();
-            },
-            onFinish : (importResult, threeObject) =>
-            {
-                this.SetUIState (WebsiteUIState.Model);
-                this.OnModelLoaded (importResult, threeObject);
-                let importedExtension = GetFileExtension (importResult.mainFile);
-                HandleEvent ('model_loaded', importedExtension);
-            },
-            onRender : () =>
-            {
-                this.viewer.Render ();
-            },
-            onError : (importError) =>
-            {
-                this.SetUIState (WebsiteUIState.Intro);
-                let extensionStr = null;
-                if (importError.mainFile !== null) {
-                    extensionStr = GetFileExtension (importError.mainFile);
-                } else {
-                    let extensions = [];
-                    let importer = this.modelLoaderUI.GetImporter ();
-                    let fileList = importer.GetFileList ().GetFiles ();
-                    for (let i = 0; i < fileList.length; i++) {
-                        let extension = fileList[i].extension;
-                        extensions.push (extension);
+        let path = savedFiles.static_url;
+
+        const loadModelWithPath = (modelPath) => {
+            const fileObjects = [
+                {
+                    name: modelPath.split('/').pop(),
+                    source: 1,
+                    data: `http://127.0.0.1:8000${modelPath}`,
+                }
+            ];
+
+            this.modelLoaderUI.LoadModel(fileObjects, settings, {
+                onStart: () => {
+                    this.SetUIState(WebsiteUIState.Loading);
+                    this.ClearModel();
+                },
+                onFinish: (importResult, threeObject) => {
+                    this.SetUIState(WebsiteUIState.Model);
+                    this.OnModelLoaded(importResult, threeObject);
+                    let importedExtension = GetFileExtension(importResult.mainFile);
+                    HandleEvent('model_loaded', importedExtension);
+                },
+                onRender: () => {
+                    this.viewer.Render();
+                },
+                onError: (importError) => {
+                    this.SetUIState(WebsiteUIState.Intro);
+                    let extensionStr = null;
+                    if (importError.mainFile !== null) {
+                        extensionStr = GetFileExtension(importError.mainFile);
+                    } else {
+                        let extensions = [];
+                        let importer = this.modelLoaderUI.GetImporter();
+                        let fileList = importer.GetFileList().GetFiles();
+                        for (let i = 0; i < fileList.length; i++) {
+                            extensions.push(fileList[i].extension);
+                        }
+                        extensionStr = extensions.join(',');
                     }
-                    extensionStr = extensions.join (',');
+
+                    if (importError.code === ImportErrorCode.NoImportableFile) {
+                        HandleEvent('no_importable_file', extensionStr);
+                    } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
+                        HandleEvent('failed_to_load_file', extensionStr);
+                    } else if (importError.code === ImportErrorCode.ImportFailed) {
+                        HandleEvent('import_failed', extensionStr, {
+                            error_message: importError.message
+                        });
+                    }
                 }
-                if (importError.code === ImportErrorCode.NoImportableFile) {
-                    HandleEvent ('no_importable_file', extensionStr);
-                } else if (importError.code === ImportErrorCode.FailedToLoadFile) {
-                    HandleEvent ('failed_to_load_file', extensionStr);
-                } else if (importError.code === ImportErrorCode.ImportFailed) {
-                    HandleEvent ('import_failed', extensionStr, {
-                        error_message : importError.message
-                    });
-                }
+            });
+        };
+
+        // Initial load
+        loadModelWithPath(path);
+
+        // Listen for `/api/update-model` responses
+        window.onUpdateModelResponse = (responseData) => {
+            // Only reload if JSON differs
+            if (JSON.stringify(responseData.json) !== JSON.stringify(this.lastResultJson)) {
+                console.log('Reloading model from updated response:', responseData);
+                path = responseData.static_url;
+                loadModelWithPath(path);
             }
-        });
+        };
     }
+
 
     ClearHashIfNotOnlyUrlList ()
     {
