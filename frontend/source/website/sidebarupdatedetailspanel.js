@@ -51,6 +51,8 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         this.currentObject = object3D;
         this.allProperties = [];
 
+        this.lastResultJson = result.json;
+
         let table = AddDiv(this.contentDiv, 'ov_property_table');
         let boundingBox = GetBoundingBox(object3D);
         let size = SubCoord3D(boundingBox.max, boundingBox.min);
@@ -388,10 +390,10 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
     }
 
     RefreshPanel() {
-        if (this.currentObject) {
-            this.AddObject3DProperties(this.currentModel, this.currentObject);
-        } else if (this.currentMaterial) {
-            this.AddMaterialProperties(this.currentMaterial);
-        }
+    if (this.currentObject) {
+        this.AddObject3DProperties(this.currentModel, this.currentObject, { json: this.lastResultJson || [] });
+    } else if (this.currentMaterial) {
+        this.AddMaterialProperties(this.currentMaterial);
     }
+}
 }
