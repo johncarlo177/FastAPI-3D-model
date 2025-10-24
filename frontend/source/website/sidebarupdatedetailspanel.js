@@ -193,9 +193,16 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
 
         if (editable) {
             // Add Edit Button
-            let editButton = AddDiv(row, 'ov_property_table_cell ov_property_table_edit', '<i class="fa-solid fa-marker"></i>');
+            let editButton = AddDiv(row, 'ov_property_table_cell ov_property_table_edit');
             editButton.style.cursor = 'pointer';
             editButton.title = 'Edit this property';
+
+            const svgImg = document.createElement('img');
+            svgImg.src = '/assets/icons/marker-solid-full.svg'; 
+            svgImg.style.width = '20px';
+            svgImg.style.height = '20px';
+            editButton.appendChild(svgImg);
+
             editButton.addEventListener('click', () => {
                 this.MakePropertyEditable(property, valueColumn, editButton);
             });
@@ -234,6 +241,8 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
     }
 
     MakePropertyEditable(property, valueColumn, editButton) {
+        const img = editButton.querySelector('img'); // get the existing img
+
         const enterEditMode = () => {
             ClearDomElement(valueColumn);
 
@@ -283,7 +292,8 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
                 }, 100);
             });
 
-            editButton.innerHTML = '<i class="fa-solid fa-check"></i>';
+            // hide the icon while editing
+            if (img) img.style.display = 'none';
             editButton.onclick = exitEditMode;
         };
 
@@ -291,15 +301,16 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
             this.DisplayPropertyValue(property, valueColumn);
 
             if (property._dimRef) {
-                property._dimRef.value = parseFloat(property.value) / 1000; // convert back to original scale
+                property._dimRef.value = parseFloat(property.value) / 1000;
             }
 
-            editButton.innerHTML = '<i class="fa-solid fa-marker"></i>';
+            // show marker again
+            if (img) img.style.display = 'block';
             editButton.onclick = enterEditMode;
         };
 
         // initial binding
-        editButton.innerHTML = '<i class="fa-solid fa-marker"></i>';
+        if (img) img.style.display = 'block';
         editButton.onclick = enterEditMode;
     }
 
@@ -363,19 +374,42 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
     }
 
     async SaveProperties() {
+        // Remove any previous warning
+        let existingWarning = this.contentDiv.querySelector('.save-warning');
+        if (existingWarning) existingWarning.remove();
+
         try {
             if (!this.lastResultJson) {
                 alert('No data to save.');
                 return;
             }
-            console.log(this.result, 'result');
+
+            // Check if anything has changed
+            const original = JSON.stringify(this.originalJson);
+            const current = JSON.stringify(this.lastResultJson);
+
+            if (original === current) {
+                // Create red warning message with inline styles
+                const warning = AddDiv(this.contentDiv, 'save-warning', 'You haven\'t changed anything!');
+                Object.assign(warning.style, {
+                    color: 'red',
+                    fontSize: '14px',
+                    textAlign: 'center',
+                    marginBottom: '10px'
+                });
+                return;
+            }
+
+            // Proceed to save if changes exist
             const response = await axiosInstance.post('/api/update-model', {
                 uuid: this.result.uuid,
                 json: this.lastResultJson,
             });
 
             if (response.data.status === 'ok') {
-                alert('Properties saved successfully!');
+                console.log(response.data, 'response');
+                // Update originalJson to current state
+                this.originalJson = JSON.parse(JSON.stringify(this.lastResultJson));
             } else {
                 alert('Failed to save: ' + (response.data.message || 'Unknown error'));
             }
@@ -386,11 +420,12 @@ export class SidebarUpdateDetailsPanel extends SidebarPanel {
         }
     }
 
+
     RefreshPanel() {
-    if (this.currentObject) {
-        this.AddObject3DProperties(this.currentModel, this.currentObject, { json: this.lastResultJson || [] });
-    } else if (this.currentMaterial) {
-        this.AddMaterialProperties(this.currentMaterial);
+        if (this.currentObject) {
+            this.AddObject3DProperties(this.currentModel, this.currentObject, { json: this.lastResultJson || [] });
+        } else if (this.currentMaterial) {
+            this.AddMaterialProperties(this.currentMaterial);
+        }
     }
-}
 }
